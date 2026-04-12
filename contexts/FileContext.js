@@ -33,10 +33,18 @@ export const FileProvider = ({ children }) => {
     await AsyncStorage.setItem('ongoing_spending', JSON.stringify(updated));
   };
 
-  const clearAllData = async () => {
+  const clearAllBudget = async () => {
     try {
-      await AsyncStorage.multiRemove(['user_budget_data', 'ongoing_spending']);
+      await AsyncStorage.multiRemove(['user_budget_data']);
       setBudgetItems([]);
+    } catch (e) {
+      console.error("Failed to clear data", e);
+    }
+  };
+
+  const clearAllSpending = async () => {
+    try {
+      await AsyncStorage.multiRemove(['ongoing_spending']);
       setOngoingSpending([]);
     } catch (e) {
       console.error("Failed to clear data", e);
@@ -54,7 +62,7 @@ export const FileProvider = ({ children }) => {
       ongoingSpending,
       saveBudget,
       addOngoingSpend,
-      clearAllData,
+      clearAllBudget, clearAllSpending,
       saveOngoingList
     }}>
       {children}

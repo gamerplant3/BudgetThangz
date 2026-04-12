@@ -7,7 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFileContext } from '../contexts/FileContext';
 
 export default function BudgetScreen() {
-  const { budgetItems, ongoingSpending, saveBudget, saveOngoingList, addOngoingSpend, clearAllData } = useFileContext();
+  const { budgetItems, saveBudget, clearAllBudget } = useFileContext();
 
   const [activeTab, setActiveTab] = useState('BUDGET'); // 'BUDGET' or 'ONGOING'
   const [view, setView] = useState('monthly');
@@ -20,13 +20,6 @@ export default function BudgetScreen() {
   const [editBudgetForm, setEditBudgetForm] = useState({});
   const [budgetData, setBudgetData] = useState({
     label: '', amount: '', type: 'expense', frequency: 'monthly', date: ''
-  });
-
-  // for ongoing screen
-  const [editingOngoingId, setEditingOngoingId] = useState(null);
-  const [editOngoingForm, setEditOngoingForm] = useState({});
-  const [ongoingData, setOngoingData] = useState({
-    label: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0]
   });
 
   const freqConfig = {
@@ -55,8 +48,8 @@ export default function BudgetScreen() {
   };
 
   const handleClearAll = async () => {
-    await clearAllData();
-    setAlertMsg("Data cleared!");
+    await clearAllBudget();
+    setAlertMsg("Budget cleared!");
   };
 
   // add, delete, or edit budget entry
@@ -77,41 +70,6 @@ export default function BudgetScreen() {
     setEditingBudgetId(null);
   };
 
-  // add, delete, or edit ongoing spending entry
-  const handleAddOngoing = () => {
-    if (!ongoingData.label || !ongoingData.amount) return;
-
-    const entryToSave = {
-      id: Date.now(),
-      label: ongoingData.label,
-      amount: parseFloat(ongoingData.amount),
-      type: ongoingData.type,
-      date: ongoingData.date
-    };
-
-    addOngoingSpend(entryToSave);
-
-    setOngoingData({
-      label: '',
-      amount: '',
-      type: 'expense',
-      date: new Date().toISOString().split('T')[0]
-    });
-  };
-
-  const deleteOngoingItem = (id) => {
-    const updated = ongoingSpending.filter(item => item.id !== id);
-    saveOngoingList(updated);
-  };
-
-  const saveOngoingEdit = () => {
-    const updated = ongoingSpending.map(item =>
-      item.id === editingOngoingId ? { ...editOngoingForm, amount: parseFloat(editOngoingForm.amount) } : item
-    );
-    saveOngoingList(updated);
-    setEditingOngoingId(null);
-  };
-
   // numbers
   const budgetTotals = (() => {
     let totalInc = 0; let totalExp = 0;
@@ -129,24 +87,8 @@ export default function BudgetScreen() {
     return { inc: totalInc, exp: totalExp, net: totalInc - totalExp };
   })();
 
-  const ongoingTotal = (() => {
-    return ongoingSpending
-      .filter(s => isThisMonth(s.date))
-      .reduce((acc, s) => {
-        return s.type === 'income' ? acc + s.amount : acc - s.amount;
-      }, 0);
-  })();
-
   return (
     <LinearGradient colors={['#f0f9ff', '#e0f2fe', '#fdf2f8']} style={styles.pageWrapper}>
-      {/* Tab Selector */}
-      <View style={styles.tabsContainer}>
-        {['BUDGET', 'ONGOING'].map(tab => (
-          <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} style={[styles.tabCell, activeTab === tab && styles.activeTab]}>
-            <Text style={styles.tabText}>{tab.toUpperCase()}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
 
       {/* Popup message */}
       {alertMsg && (
@@ -183,255 +125,163 @@ export default function BudgetScreen() {
         />
       )}
 
-      {activeTab === 'BUDGET' ? (
-        /* First screen */
-        <ScrollView contentContainerStyle={styles.scrollPadding} keyboardShouldPersistTaps="handled">
-          <View style={styles.textwrapper}>
-            <View style={styles.headerRow}>
-              <Text style={styles.header}>▼・ᴥ・▼</Text>
-              <TouchableOpacity onPress={handleClearAll} style={styles.clearAllBtn}>
-                <Text style={styles.clearAllBtnText}>Clear All</Text>
-              </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.scrollPadding} keyboardShouldPersistTaps="handled">
+        <View style={styles.textwrapper}>
+          <View style={styles.headerRow}>
+            <Text style={styles.header}>Budget</Text>
+            <TouchableOpacity onPress={handleClearAll} style={styles.clearAllBtn}>
+              <Text style={styles.clearAllBtnText}>Clear All</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={{ fontSize: 16, color: '#444' }}> Planned income and expenses </Text>
+
+          {/* Budget Form */}
+          <View style={styles.compactForm}>
+            <View style={styles.inputRow}>
+             <TextInput style={styles.flexInput} placeholder="Label (e.g. Rent)" value={budgetData.label} onChangeText={(t) => setBudgetData({...budgetData, label: t})} />
+             <TextInput style={styles.flexInput} placeholder="Amount" keyboardType="numeric" value={budgetData.amount} onChangeText={(t) => setBudgetData({...budgetData, amount: t})} />
             </View>
 
-            {/* Budget Form */}
-            <View style={styles.compactForm}>
-              <View style={styles.inputRow}>
-               <TextInput style={styles.flexInput} placeholder="Label (e.g. Rent)" value={budgetData.label} onChangeText={(t) => setBudgetData({...budgetData, label: t})} />
-               <TextInput style={styles.flexInput} placeholder="Amount" keyboardType="numeric" value={budgetData.amount} onChangeText={(t) => setBudgetData({...budgetData, amount: t})} />
+            <View style={styles.inputRow}>
+              <View style={[styles.pickerCell, { flex: budgetData.frequency === 'once' ? 1 : 1.1 }]}>
+                <Picker
+                  selectedValue={budgetData.frequency}
+                  onValueChange={(v) => setBudgetData({...budgetData, frequency: v})}
+                  mode="dropdown"
+                  itemStyle={{ color: 'black' }}
+                >
+                  {Object.keys(freqConfig).map(k => (
+                    <Picker.Item
+                      key={k}
+                      label={freqConfig[k].label}
+                      value={k}
+                      style={{ fontSize: 14, color: 'black'}}
+                    />
+                  ))}
+                </Picker>
               </View>
 
-              <View style={styles.inputRow}>
-                <View style={[styles.pickerCell, { flex: budgetData.frequency === 'once' ? 1 : 1.1 }]}>
-                  <Picker selectedValue={budgetData.frequency} onValueChange={(v) => setBudgetData({...budgetData, frequency: v})} mode="dropdown">
-                    {Object.keys(freqConfig).map(k => <Picker.Item key={k} label={freqConfig[k].label} value={k} style={{fontSize: 14}}/>)}
-                  </Picker>
-                </View>
-
-                <View style={[styles.pickerCell, {flex: 1}]}>
-                  <Picker selectedValue={budgetData.type} onValueChange={(v) => setBudgetData({...budgetData, type: v})} mode="dropdown">
-                    <Picker.Item label="Income" value="income" style={{fontSize: 14}} />
-                    <Picker.Item label="Expense" value="expense" style={{fontSize: 14}} />
-                  </Picker>
-                </View>
-
-                {/* Only show Add button in 3rd row if not 'once' frequency */}
-                {budgetData.frequency !== 'once' && (
-                  <TouchableOpacity style={styles.addBtn} onPress={handleAddBudgetEntry}>
-                    <Text style={{color: 'white', fontWeight: 'bold'}}>Add</Text>
-                  </TouchableOpacity>
-                )}
+              <View style={[styles.pickerCell, {flex: 1}]}>
+                <Picker
+                  selectedValue={budgetData.type}
+                  onValueChange={(v) => setBudgetData({...budgetData, type: v})}
+                  mode="dropdown"
+                  itemStyle={{ color: 'black' }}
+                >
+                  <Picker.Item label="Income" value="income" color="black" style={{fontSize: 14}} />
+                  <Picker.Item label="Expense" value="expense" color="black" style={{fontSize: 14}} />
+                </Picker>
               </View>
 
-              {/* Third row: Only for one-time stuff */}
-              {budgetData.frequency === 'once' && (
-                <View style={styles.inputRow}>
-                  <TouchableOpacity
-                    style={[styles.flexInput]}
-                    onPress={() => {
-                      setDateTarget('budget');
-                      setShowDatePicker(true);
-                    }}
-                  >
-                    <Text style={{color: '#444'}}>📅 {budgetData.date || 'Select Date'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.addBtn} onPress={handleAddBudgetEntry}>
-                    <Text style={{color: 'white', fontWeight: 'bold'}}>Add</Text>
-                  </TouchableOpacity>
-                </View>
+              {/* Only show Add button in 3rd row if not 'once' frequency */}
+              {budgetData.frequency !== 'once' && (
+                <TouchableOpacity style={styles.addBtn} onPress={handleAddBudgetEntry}>
+                  <Text style={{color: 'white', fontWeight: 'bold'}}>Add</Text>
+                </TouchableOpacity>
               )}
             </View>
 
-            {/* Budget List */}
-            {Object.keys(freqConfig).map(fKey => {
-              const filtered = budgetItems.filter(i => i.frequency === fKey);
-              if (filtered.length === 0) return null;
-              return (
-                <View key={fKey} style={styles.tableGroup}>
-                  <Text style={styles.tableHeader}>{freqConfig[fKey].label.toUpperCase()}</Text>
-                  {filtered.map(item => (
-                    <View key={item.id}>
-                      {editingBudgetId === item.id ? (
-                        <View style={styles.editRow}>
-                          <View style={styles.editGrid}>
-                            <TextInput style={styles.flexInput} value={editBudgetForm.label} onChangeText={t => setEditBudgetForm({...editBudgetForm, label: t})} />
-                            <TextInput style={styles.flexInput} keyboardType="numeric" value={editBudgetForm.amount.toString()} onChangeText={t => setEditBudgetForm({...editBudgetForm, amount: t})} />
-                            {item.frequency === 'once' && (
-                              <TouchableOpacity
-                                style={styles.flexInput}
-                                onPress={() => {
-                                  setDateTarget('edit');
-                                  setShowDatePicker(true);
-                                }}
-                              >
-                                <Text>{editBudgetForm.date || 'Date'}</Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                          <View style={styles.editActions}>
-                            <TouchableOpacity onPress={saveBudgetEdit}><Text style={styles.emojiBtn}>✔️</Text></TouchableOpacity>
-                            <TouchableOpacity onPress={() => setEditingBudgetId(null)}><Text style={styles.emojiBtn}>❌</Text></TouchableOpacity>
-                          </View>
-                        </View>
-                      ) : (
-                        <View style={styles.itemRow}>
-                          <Text style={styles.labelCol}>
-                            {item.label} {item.frequency === 'once' && item.date ? <Text style={styles.smallDate}>({item.date})</Text> : null}
-                          </Text>
-                          <Text style={[styles.amountCol, { color: item.type === 'income' ? '#2e7d32' : '#d32f2f' }]}>
-                            {item.type === 'income' ? '+' : '-'}${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                          </Text>
-                          <View style={styles.actionCol}>
-                            <TouchableOpacity onPress={() => { setEditingBudgetId(item.id); setEditBudgetForm({...item}); }}><Text style={styles.emojiBtn}>✏️</Text></TouchableOpacity>
-                            <TouchableOpacity onPress={() => deleteBudgetItem(item.id)}><Text style={styles.emojiBtn}>🗑️</Text></TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              );
-            })}
-
-            {/* Summary Section */}
-            <View style={styles.summaryContainer}>
-              <View style={styles.viewToggle}>
-                <Text style={styles.toggleLabel}>SUMMARY:</Text>
-                {['weekly', 'monthly', 'annual'].map(v => (
-                  <TouchableOpacity key={v} onPress={() => setView(v)} style={[styles.toggleBtn, view === v && styles.toggleBtnActive]}>
-                    <Text style={[styles.toggleText, view === v && {fontWeight: 'bold'}]}>{v.charAt(0).toUpperCase() + v.slice(1)}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={styles.statsWrapped}>
-                <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Income:</Text>
-                  <Text style={[styles.statValue, {color: '#2e7d32'}]}>${budgetTotals.inc.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Expenses:</Text>
-                  <Text style={[styles.statValue, {color: '#d32f2f'}]}>${budgetTotals.exp.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-                </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statLabel}>Net:</Text>
-                  <Text style={[styles.statValue, {color: budgetTotals.net >= 0 ? '#2e7d32' : '#d32f2f', fontWeight: 'bold'}]}>
-                    ${budgetTotals.net.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </ScrollView>
-      ) : (
-        /* Second screen */
-        <ScrollView contentContainerStyle={styles.scrollPadding}>
-          <View style={styles.textwrapper}>
-            <Text style={styles.header}>
-              Running Total:
-              <Text style={{ color: ongoingTotal >= 0 ? '#2e7d32' : '#d32f2f' }}>
-                {ongoingTotal < 0 ? ' -' : ' '}${Math.abs(ongoingTotal).toFixed(2)}
-              </Text>
-            </Text>
-
-            <View style={styles.compactForm}>
+            {/* Third row: Only for one-time stuff */}
+            {budgetData.frequency === 'once' && (
               <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.flexInput}
-                  placeholder="Label (e.g. Groceries)"
-                  value={ongoingData.label}
-                  onChangeText={(t) => setOngoingData({...ongoingData, label: t})}
-                />
-                <TextInput
-                  style={styles.flexInput}
-                  placeholder="Amount"
-                  keyboardType="numeric"
-                  value={ongoingData.amount}
-                  onChangeText={(t) => setOngoingData({...ongoingData, amount: t})}
-                />
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={[styles.pickerCell, {flex: 1.2}]}>
-                  <Picker
-                    selectedValue={ongoingData.type}
-                    onValueChange={(v) => setOngoingData({...ongoingData, type: v})}
-                  >
-                    <Picker.Item label="Expense" value="expense" />
-                    <Picker.Item label="Income" value="income" />
-                  </Picker>
-                </View>
-
                 <TouchableOpacity
-                  style={[styles.flexInput, {flex: 1}]}
+                  style={[styles.flexInput]}
                   onPress={() => {
-                    setDateTarget('ongoing');
+                    setDateTarget('budget');
                     setShowDatePicker(true);
                   }}
                 >
-                  <Text>📅 {ongoingData.date}</Text>
+                  <Text style={{ color: 'blue' }}>📅 {budgetData.date || 'Select Date'}</Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity style={styles.addBtn} onPress={handleAddOngoing}>
-                  <Text style={{color: 'white', fontWeight: 'bold'}}>Log</Text>
+                <TouchableOpacity style={styles.addBtn} onPress={handleAddBudgetEntry}>
+                  <Text style={{color: 'white', fontWeight: 'bold'}}>Add</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            )}
+          </View>
 
-            <View style={styles.tableGroup}>
-              <Text style={styles.tableHeader}>RECENT ACTIVITY (THIS MONTH)</Text>
-              {ongoingSpending.filter(s => isThisMonth(s.date)).map(item => (
-                <View key={item.id}>
-                  {editingOngoingId === item.id ? (
-                    /* EDITING ROW */
-                    <View style={styles.editRow}>
-                      <View style={styles.editGrid}>
-                        <TextInput
-                          style={styles.flexInput}
-                          value={editOngoingForm.label}
-                          onChangeText={t => setEditOngoingForm({...editOngoingForm, label: t})}
-                        />
-                        <TextInput
-                          style={styles.flexInput}
-                          keyboardType="numeric"
-                          value={editOngoingForm.amount.toString()}
-                          onChangeText={t => setEditOngoingForm({...editOngoingForm, amount: t})}
-                        />
+          {/* Budget List */}
+          {Object.keys(freqConfig).map(fKey => {
+            const filtered = budgetItems.filter(i => i.frequency === fKey);
+            if (filtered.length === 0) return null;
+            return (
+              <View key={fKey} style={styles.tableGroup}>
+                <Text style={styles.tableHeader}>{freqConfig[fKey].label.toUpperCase()}</Text>
+                {filtered.map(item => (
+                  <View key={item.id}>
+                    {editingBudgetId === item.id ? (
+                      <View style={styles.editRow}>
+                        <View style={styles.editGrid}>
+                          <TextInput style={styles.flexInput} value={editBudgetForm.label} onChangeText={t => setEditBudgetForm({...editBudgetForm, label: t})} />
+                          <TextInput style={styles.flexInput} keyboardType="numeric" value={editBudgetForm.amount.toString()} onChangeText={t => setEditBudgetForm({...editBudgetForm, amount: t})} />
+                          {item.frequency === 'once' && (
+                            <TouchableOpacity
+                              style={styles.flexInput}
+                              onPress={() => {
+                                setDateTarget('edit');
+                                setShowDatePicker(true);
+                              }}
+                            >
+                              <Text>{editBudgetForm.date || 'Date'}</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        <View style={styles.editActions}>
+                          <TouchableOpacity onPress={saveBudgetEdit}><Text style={styles.emojiBtn}>✔️</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => setEditingBudgetId(null)}><Text style={styles.emojiBtn}>❌</Text></TouchableOpacity>
+                        </View>
                       </View>
-                      <View style={styles.editActions}>
-                        <TouchableOpacity onPress={saveOngoingEdit}><Text style={styles.emojiBtn}>✔️</Text></TouchableOpacity>
-                        <TouchableOpacity onPress={() => setEditingOngoingId(null)}><Text style={styles.emojiBtn}>❌</Text></TouchableOpacity>
+                    ) : (
+                      <View style={styles.itemRow}>
+                        <Text style={styles.labelCol}>
+                          {item.label} {item.frequency === 'once' && item.date ? <Text style={styles.smallDate}>({item.date})</Text> : null}
+                        </Text>
+                        <Text style={[styles.amountCol, { color: item.type === 'income' ? '#2e7d32' : '#d32f2f' }]}>
+                          {item.type === 'income' ? '+' : '-'}${item.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        </Text>
+                        <View style={styles.actionCol}>
+                          <TouchableOpacity onPress={() => { setEditingBudgetId(item.id); setEditBudgetForm({...item}); }}><Text style={styles.emojiBtn}>✏️</Text></TouchableOpacity>
+                          <TouchableOpacity onPress={() => deleteBudgetItem(item.id)}><Text style={styles.emojiBtn}>🗑️</Text></TouchableOpacity>
+                        </View>
                       </View>
-                    </View>
-                  ) : (
-                    /* STANDARD ROW */
-                    <View style={styles.itemRow}>
-                      <View style={{flex: 2}}>
-                        <Text style={styles.labelCol}>{item.label}</Text>
-                        <Text style={styles.smallDate}>{new Date(item.date + 'T12:00:00').toLocaleDateString()}</Text>
-                      </View>
-                      <Text style={[styles.amountCol, {color: item.type === 'income' ? '#2e7d32' : '#d32f2f'}]}>
-                        {item.type === 'income' ? '+' : '-'}${item.amount.toFixed(2)}
-                      </Text>
-                      <View style={styles.actionCol}>
-                        <TouchableOpacity onPress={() => {
-                            setEditingOngoingId(item.id);
-                            setEditOngoingForm({...item});
-                        }}>
-                          <Text style={styles.emojiBtn}>✏️</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => deleteOngoingItem(item.id)}>
-                          <Text style={styles.emojiBtn}>🗑️</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+
+          {/* Summary Section */}
+          <View style={styles.summaryContainer}>
+            <View style={styles.viewToggle}>
+              <Text style={styles.toggleLabel}>SUMMARY:</Text>
+              {['weekly', 'monthly', 'annual'].map(v => (
+                <TouchableOpacity key={v} onPress={() => setView(v)} style={[styles.toggleBtn, view === v && styles.toggleBtnActive]}>
+                  <Text style={[styles.toggleText, view === v && {fontWeight: 'bold'}]}>{v.charAt(0).toUpperCase() + v.slice(1)}</Text>
+                </TouchableOpacity>
               ))}
             </View>
+
+            <View style={styles.statsWrapped}>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Income:</Text>
+                <Text style={[styles.statValue, {color: '#2e7d32'}]}>${budgetTotals.inc.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Expenses:</Text>
+                <Text style={[styles.statValue, {color: '#d32f2f'}]}>${budgetTotals.exp.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statLabel}>Net:</Text>
+                <Text style={[styles.statValue, {color: budgetTotals.net >= 0 ? '#2e7d32' : '#d32f2f', fontWeight: 'bold'}]}>
+                  ${budgetTotals.net.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                </Text>
+              </View>
+            </View>
           </View>
-        </ScrollView>
-      )}
+        </View>
+      </ScrollView>
     </LinearGradient>
   );
 }
@@ -442,15 +292,9 @@ const styles = StyleSheet.create({
   scrollPadding: { paddingTop: 15, paddingBottom: 15, paddingHorizontal: 15 },
   textwrapper: { backgroundColor: 'white', borderRadius: 12, padding: 20, elevation: 13 },
 
-  // Tabs at the top
-  tabsContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 10, marginBottom: 10 },
-  tabCell: { paddingVertical: 5, paddingHorizontal: 40, borderRadius: 20 },
-  activeTab: { backgroundColor: 'rgba(0,0,0,0.2)' },
-  tabText: { color: '#000', fontWeight: 'bold' },
-
   // title and top buttons
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  header: { fontSize: 24, color: '#444' },
+  header: { fontSize: 20, color: '#444', fontWeight: 'bold' },
   btnRow: { flexDirection: 'row', gap: 10 },
   clearAllBtn: { backgroundColor: '#e3f2fd', padding: 8, borderRadius: 5 },
   clearAllBtnText: { color: '#2196f3', fontSize: 13 },

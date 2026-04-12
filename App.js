@@ -7,11 +7,13 @@ import { FileProvider } from './contexts/FileContext';
 
 import HomeScreen from './screens/HomeScreen';
 import BudgetScreen from './screens/BudgetScreen';
+import SpendingScreen from './screens/SpendingScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
 // White screen icons
 import HomeIconWhite from './assets/icons/home_white.png';
-import SpendingIconWhite from './assets/icons/spending_white.png';
+import BudgetIconWhite from './assets/icons/budget_white.png';
+import CalendarIconWhite from './assets/icons/calendar_white.png';
 import SettingsIconWhite from './assets/icons/settings_white.png';
 
 const Tab = createBottomTabNavigator();
@@ -36,7 +38,9 @@ function AppTabs() {
           if (route.name === 'Home') {
             iconSource = HomeIconWhite;
           } else if (route.name === 'Budget') {
-            iconSource = SpendingIconWhite;
+            iconSource = BudgetIconWhite;
+          } else if (route.name === 'Spending') {
+            iconSource = CalendarIconWhite;
           } else if (route.name === 'Settings') {
             iconSource = SettingsIconWhite;
           }
@@ -47,6 +51,7 @@ function AppTabs() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Budget" component={BudgetScreen} />
+      <Tab.Screen name="Spending" component={SpendingScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
