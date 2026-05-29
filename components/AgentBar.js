@@ -3,7 +3,7 @@ import { View, TextInput, TouchableOpacity, Text, StyleSheet, ActivityIndicator,
 import { useFileContext } from '../contexts/FileContext';
 
 export default function AgentBar() {
-  const { budgetItems, saveBudget, addOngoingSpend } = useFileContext();
+  const { budgetItems, saveBudget, ongoingSpending, addOngoingSpend, saveOngoingList } = useFileContext();
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +25,8 @@ export default function AgentBar() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: inputMessage,
-          current_budget_items: budgetItems // Pass the current list as context
+          current_budget_items: budgetItems, // Pass the current list as context
+          current_ongoing_spending: ongoingSpending // <-- Pass ongoing spending history
         })
       });
 
@@ -38,7 +39,9 @@ export default function AgentBar() {
       if (data.type === 'action_execution_plan' && data.actions.length > 0) {
         // a mutable copy of budget items in case we need to filter
         let updatedBudgetList = [...budgetItems];
+        let updatedSpendingList = [...ongoingSpending];
         let didModifyBudget = false;
+        let didModifySpending = false;
 
         data.actions.forEach(action => {
           const params = typeof action.payload === 'string' ? JSON.parse(action.payload) : action.payload;
@@ -50,7 +53,8 @@ export default function AgentBar() {
               type: params.type || 'expense',
               date: params.date
             });
-          } else if (action.target_action === 'stage_budget_item') {
+          }
+          else if (action.target_action === 'stage_budget_item') {
             updatedBudgetList.push({
               id: Date.now(),
               label: params.label,
@@ -60,26 +64,38 @@ export default function AgentBar() {
               date: params.date || ''
             });
             didModifyBudget = true;
-          } else if (action.target_action === 'delete_budget_item') {
+          }
+          else if (action.target_action === 'delete_budget_item') {
             updatedBudgetList = updatedBudgetList.filter(item => item.id !== params.id);
             didModifyBudget = true;
           }
+
+          else if (action.target_action === 'modify_ongoing_spend') {
+            updatedSpendingList = updatedSpendingList.map(item => {
+              if (item.id === params.id) {
+                return {
+                  ...item,
+                  label: params.label || item.label,
+                  amount: parseFloat(params.amount)
+                };
+              }
+              return item;
+            });
+            didModifySpending = true;
+          }
         });
 
-        // If the agent added or removed structural budget elements, save the array
-        if (didModifyBudget) {
-          saveBudget(updatedBudgetList);
-        }
+        if (didModifyBudget) saveBudget(updatedBudgetList);
+        if (didModifySpending) saveOngoingList(updatedSpendingList);
 
         Alert.alert("Success", data.agent_reply);
         setInputMessage('');
       } else {
-        // Conversational response fallback handling
         Alert.alert("AI Assistant", data.agent_reply);
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("Connection Failed", "Could not reach the AI server agent. Verify network/IP host configurations.");
+      Alert.alert("Connection Failed", "Could not coordinate with backend data pipelines.");
     } finally {
       setLoading(false);
     }
