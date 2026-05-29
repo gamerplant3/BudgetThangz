@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useFileContext } from '../contexts/FileContext';
 import logo from '../assets/logo.png';
+import AgentBar from '../components/AgentBar';
 
 export default function HomeScreen() {
   const { budgetItems, ongoingSpending } = useFileContext();
@@ -67,6 +68,11 @@ export default function HomeScreen() {
 
   return (
     <LinearGradient colors={['#f0f9ff', '#e0f2fe', '#fdf2f8']} style={styles.container} >
+      {/* AGENT INPUT BAR */}
+      <View style={{ width: '100%', marginBottom: 10 }}>
+         <AgentBar />
+      </View>
+
       <View style={styles.card}>
         <View style={styles.logoContainer}>
           <Image
