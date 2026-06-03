@@ -1,12 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useFileContext } from '../contexts/FileContext';
+import { useAgentContext } from '../contexts/AgentContext';
 import logo from '../assets/logo.png';
 import AgentBar from '../components/AgentBar';
 
 export default function HomeScreen() {
   const { budgetItems, ongoingSpending } = useFileContext();
+  const { refreshApiKeyStatus } = useAgentContext();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshApiKeyStatus();
+    }, [refreshApiKeyStatus]),
+  );
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedMonthLabel, setSelectedMonthLabel] = useState('');
 

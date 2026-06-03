@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Image } from 'react-native';
 
 import { FileProvider } from './contexts/FileContext';
+import { AgentProvider } from './contexts/AgentContext';
 
 import HomeScreen from './screens/HomeScreen';
 import BudgetScreen from './screens/BudgetScreen';
@@ -60,9 +61,11 @@ function AppTabs() {
 export default function App() {
   return (
     <FileProvider>
-      <NavigationContainer>
-        <AppTabs />
-      </NavigationContainer>
+      <AgentProvider>
+        <NavigationContainer>
+          <AppTabs />
+        </NavigationContainer>
+      </AgentProvider>
     </FileProvider>
   );
 }

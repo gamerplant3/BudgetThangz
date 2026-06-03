@@ -105,6 +105,24 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+    // backend-agent/ is dev-only Python; the release JS bundle excludes it via metro.config.js.
+    packaging {
+        resources {
+            excludes += [
+                "**/backend-agent/**",
+            ]
+        }
+    }
+}
+
+// Release builds bundle JS through Metro (backend-agent blocked in metro.config.js).
+tasks.configureEach { task ->
+    if (task.name == "assembleRelease" || task.name == "bundleRelease") {
+        task.doFirst {
+            logger.lifecycle("Release build: mobile app only (backend-agent is not included).")
+        }
+    }
 }
 
 dependencies {
