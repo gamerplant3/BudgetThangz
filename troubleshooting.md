@@ -72,3 +72,15 @@ cd android
 cd ..
 npm run android
 ```
+
+6. react native check
+```sh
+npx react-native doctor
+```
+
+### Install uv (for python backend)
+```sh
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+[Environment]::SetEnvironmentVariable("Path", "C:\Users\me\.local\bin;" + [Environment]::GetEnvironmentVariable("Path", "User"), "User")
+uv --version
+```
