@@ -96,3 +96,8 @@ Change an item
 <img width="200" alt="Screenshot 2026-05-29 171454" src="https://github.com/user-attachments/assets/2566c9ba-5b67-403a-96c6-5af832b133c6" />
 <img width="200" alt="Screenshot 2026-05-29 171500" src="https://github.com/user-attachments/assets/c92f323a-7ab4-4403-9f30-41f7c3d2b5de" />
 
+
+API key things on a real phone
+
+<img width="200" alt="Screenshot 2026-06-03 125938" src="https://github.com/user-attachments/assets/d4a0389c-a3b1-49f2-99da-ab08a5e98e6c" />
+<img width="200" alt="Screenshot 2026-06-03 125914" src="https://github.com/user-attachments/assets/4280e3e2-f4ba-428f-9342-753101d8f2a7" />
